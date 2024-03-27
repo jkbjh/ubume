@@ -9,5 +9,6 @@ main module itself) are already imported.
 Example usage:
 
 ```
-python -m ubume /tmp/ubume_test_main.socket ubume.test_main -- arg1 arg2 arg3
+python -m ubume /tmp/ubume_test_main.socket your_program_main -- arg1 arg2 arg3
 ```
+further executions of `your_program_main` will use the launched fork server --- until the server times out and shuts down.
