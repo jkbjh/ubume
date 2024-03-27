@@ -2,33 +2,41 @@ import socket
 import os
 import sys
 import signal
+from util import send_msg, recv_msg
 
 
 def handle_client(client_socket, client_address):
+    print("waiting for file descriptors")
     # Receive the file descriptors from the client
-    stdin_fd = int(client_socket.recv(1024).decode())
-    stdout_fd = int(client_socket.recv(1024).decode())
-    stderr_fd = int(client_socket.recv(1024).decode())
+    stdin = recv_msg(client_socket)
+    stdout = recv_msg(client_socket)
+    stderr = recv_msg(client_socket)
+    print(stdin, stdout, stderr)
+    fobj_stdin = open(stdin, "r")
+    fobj_stdout = open(stdout, "w")
+    fobj_stderr = open(stderr, "w")
+    stdin_fd = fobj_stdin.fileno()
+    stdout_fd = fobj_stdout.fileno()
+    stderr_fd = fobj_stderr.fileno()
+    print(stdin_fd, stdout_fd, stderr_fd)
 
+    print("hello world on server")
     # Duplicate the file descriptors to stdin, stdout, and stderr
     os.dup2(stdin_fd, 0)
     os.dup2(stdout_fd, 1)
     os.dup2(stderr_fd, 2)
 
-    # Create a new socket for communicating with the client
-    server_to_client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    server_to_client_socket.connect(client_address)
 
     # Perform a simple task (in this case, "Hello, World!")
-    print("Hello, World!")
+    print("Hello, World! (from server)")
 
     # Pass the exit code to the client
     exit_code = 0  # You can set any exit code here
-    server_to_client_socket.send(str(exit_code).encode())
+    send_msg(client_socket, exit_code)
 
     # Close the sockets
     client_socket.close()
-    server_to_client_socket.close()
+    #server_to_client_socket.close()
 
 
 def main(socket_path, timeout):
