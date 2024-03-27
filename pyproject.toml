@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ubume"
-version = "0.0.0"
+version = "0.0.1"
 authors = [{name = "The Author", email = "author@email.com"}]
 license = {text = "MIT"}
 description = "An example for a python package."
@@ -44,3 +44,6 @@ include = '''
 select = ["E", "F"]
 # Allow lines to be as long as 120 characters.
 line-length = 120
+
+[project.scripts]
+ubume = "ubume.__main__:main"

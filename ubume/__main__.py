@@ -1,12 +1,16 @@
-import runpy
 import argparse
-import socket
 import os
+import random
+import runpy
+import socket
+import string
 import sys
 import time
-import random
-import string
-from .util import send_msg, recv_msg, install_signal_forwarder, ConnectionTest
+
+from .util import ConnectionTest
+from .util import install_signal_forwarder
+from .util import recv_msg
+from .util import send_msg
 
 
 def wait_for_server(server_socket_path, timeout=30):
@@ -21,8 +25,8 @@ def wait_for_server(server_socket_path, timeout=30):
             server_socket.close()
             return
         except (ConnectionRefusedError, FileNotFoundError):
-            print("*", end="")
-            sys.stdout.flush()
+            sys.stderr.write("*")
+            sys.stderr.flush()
             time.sleep(0.5)
             continue
     raise RuntimeError("Server did not start.")
@@ -48,13 +52,14 @@ def generate_random_socket_name():
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 
-def main(server_socket_path, main_module, args):
+def client_main(server_socket_path, main_module, args):
     server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
     try:
         # Connect to the server
         server_socket.connect(server_socket_path)
-    except (ConnectionRefusedError, FileNotFoundError) as _:
+    except (ConnectionRefusedError, FileNotFoundError) as error:
+        del error
         raise NoServerError() from None
 
     # Pass the file descriptors to the server
@@ -74,21 +79,21 @@ def main(server_socket_path, main_module, args):
     sys.exit(exit_code)
 
 
-def main_or_launch(server_socket_path, module, client_args):
+def main_or_launch(server_socket_path, module, client_args, server_timeout):
     for i in range(2):
         try:
-            main(args.server_socket_path, args.module, client_args)
+            client_main(server_socket_path, module, client_args)
             return
         except NoServerError:
             pass
         fork_launch_server(
-            args.server_socket_path,
+            server_socket_path,
             server_timeout,
-            args.module,
+            module,
         )
 
 
-if __name__ == "__main__":
+def main():
     server_timeout = 5
     if "--" in sys.argv:
         sep_index = sys.argv.index("--")
@@ -100,4 +105,8 @@ if __name__ == "__main__":
     parser.add_argument("server_socket_path", type=str, help="Path to the server socket")
     parser.add_argument("module", type=str, help="python main module to load")
     args = parser.parse_args()
-    main_or_launch(args.server_socket_path, args.module, client_args)
+    main_or_launch(args.server_socket_path, args.module, client_args, server_timeout)
+
+
+if __name__ == "__main__":
+    main()
