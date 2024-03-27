@@ -6,6 +6,36 @@ import time
 import sys
 import threading
 import signal
+import stat
+import socket
+
+class ConnectionTest:
+    pass
+
+
+def unlink_disconnected_socket(filename):
+    if not os.path.exists(filename):
+        return
+    if not is_socket(filename):
+        return
+    if is_disconnected_socket(filename):
+        print(f"unlinking socket {filename}")
+        os.unlink(filename)
+
+
+def is_socket(filename):
+    return stat.S_ISSOCK(os.stat(filename).st_mode)
+
+
+def is_disconnected_socket(filename):
+    try:
+        # Try to connect to the socket
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(filename)
+        s.close()
+        return False  # Socket is still connected
+    except (ConnectionRefusedError, FileNotFoundError):
+        return True  # Socket is disconnected or file does not exist
 
 
 def install_signal_forwarder(target_pid):
@@ -22,6 +52,7 @@ def make_signal_forwarder(target_pid):
         # Send the received signal to a different PID
         os.kill(target_pid, signum)
         print(f"Caught signal {signum} and sent it to PID {target_pid}")
+
     return signal_handler
 
 
@@ -49,7 +80,6 @@ def is_running(pid):
 
 def watchdog_selfkill(pid, sleep=5, killsignal=9):
     while True:
-        print("watchdog")
         time.sleep(sleep)
         if is_running(pid):
             continue
