@@ -1,16 +1,26 @@
+import importlib
 import socket
 import os
 import sys
 import signal
-from util import send_msg, recv_msg
+from util import send_msg, recv_msg, start_selfkill_watchdog_daemon
+
+# import threading
+# import errno
+import time
+import runpy
 
 
 def handle_client(client_socket, client_address):
     print("waiting for file descriptors")
-    # Receive the file descriptors from the client
+    # --- Send PIDs and Socket IDs.
     stdin = recv_msg(client_socket)
     stdout = recv_msg(client_socket)
     stderr = recv_msg(client_socket)
+    client_pid = recv_msg(client_socket)
+    start_selfkill_watchdog_daemon(client_pid)
+    send_msg(client_socket, os.getpid())
+    # --- setup file descriptors to replace stdin,stdout, stderr
     print(stdin, stdout, stderr)
     fobj_stdin = open(stdin, "r")
     fobj_stdout = open(stdout, "w")
@@ -26,17 +36,29 @@ def handle_client(client_socket, client_address):
     os.dup2(stdout_fd, 1)
     os.dup2(stderr_fd, 2)
 
+    main_module, args = recv_msg(client_socket)
 
+    print(repr((main_module, args)))
+    module = importlib.import_module(main_module)
+    sys.argv = [main_module] + args
+    print(f"about to run: {main_module}")
+    runpy.run_module(main_module, run_name="__main__")
     # Perform a simple task (in this case, "Hello, World!")
     print("Hello, World! (from server)")
-
+    print("...server going to sleep")
+    for i in range(50):
+        print("\r main sleeping " + "." * i, end="")
+        sys.stdout.flush()
+        time.sleep(0.1)
+    print("")
+    print("sleeping done")
     # Pass the exit code to the client
     exit_code = 0  # You can set any exit code here
     send_msg(client_socket, exit_code)
 
     # Close the sockets
     client_socket.close()
-    #server_to_client_socket.close()
+    # server_to_client_socket.close()
 
 
 def main(socket_path, timeout):
@@ -63,6 +85,7 @@ def main(socket_path, timeout):
             if pid == 0:  # Child process
                 server_socket.close()  # Close the server socket in the child process
                 handle_client(client_socket, client_address)
+                print("ubume servicer exiting")
                 sys.exit(0)
             else:  # Parent process
                 client_socket.close()  # Close the client socket in the parent process
@@ -71,11 +94,13 @@ def main(socket_path, timeout):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python server.py <socket_path> <timeout>")
+    if len(sys.argv) != 4:
+        print("Usage: python server.py <socket_path> <timeout> <module>")
         sys.exit(1)
 
     socket_path = sys.argv[1]
     timeout = int(sys.argv[2])
+    module = sys.argv[3]
+    importlib.import_module(module)
 
     main(socket_path, timeout)
