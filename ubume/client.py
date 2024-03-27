@@ -6,7 +6,7 @@ import sys
 import time
 import random
 import string
-from util import send_msg, recv_msg, install_signal_forwarder, ConnectionTest
+from .util import send_msg, recv_msg, install_signal_forwarder, ConnectionTest
 
 
 def wait_for_server(server_socket_path, timeout=30):
@@ -33,8 +33,8 @@ def fork_launch_server(server_socket_path, timeout, main_module):
     pid = os.fork()
     if pid == 0:  # Child process
         os.setsid()
-        sys.argv = ["server", server_socket_path, timeout, main_module]
-        runpy.run_module("server", run_name="__main__")
+        sys.argv = ["ubume.server", server_socket_path, timeout, main_module]
+        runpy.run_module("ubume.server", run_name="__main__")
     else:  # Parent process
         wait_for_server(server_socket_path)
 

@@ -3,11 +3,7 @@ import socket
 import os
 import sys
 import signal
-from util import send_msg, recv_msg, start_selfkill_watchdog_daemon, unlink_disconnected_socket, ConnectionTest
-
-# import threading
-# import errno
-import time
+from .util import send_msg, recv_msg, start_selfkill_watchdog_daemon, unlink_disconnected_socket, ConnectionTest
 import runpy
 
 

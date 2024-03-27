@@ -1,5 +1,5 @@
 import time
-import test_submodule
+from . import test_submodule
 
 print("test_main.py: test_main imported")
 print(f"test_main.py: __name__ is set to {__name__}")
